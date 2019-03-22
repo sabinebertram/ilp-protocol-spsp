@@ -18,6 +18,14 @@ function toCamelCase (obj) {
   return res
 }
 
+class PaymentError extends Error {
+  constructor (message, { totalSent, totalReceived }) {
+    super(message)
+    this.totalSent = totalSent
+    this.totalReceived = totalReceived
+  }
+}
+
 async function query (receiver) {
   // TODO: further validation required on payment-pointer?
   // TODO: continue to support the old webfinger acct style?
@@ -79,9 +87,18 @@ async function pay (plugin, {
     })
 
     const payStream = ilpConn.createStream()
-    await payStream.sendTotal(sendAmount, { timeout: streamOpts.timeout })
 
+    try {
+      await payStream.sendTotal(sendAmount, { timeout: streamOpts.timeout })
+    } catch (err) {
+      const totalSent = payStream.totalSent
+      await ilpConn.end()
+      throw new PaymentError('Failed to send specified amount', { totalSent })
+    }
+
+    const totalSent = payStream.totalSent
     await ilpConn.end()
+    return { totalSent }
   // } else if (response.contentType.indexOf('application/spsp+json') !== -1) {
   // This should technically check for application/spsp+json but due to a bug the old
   // ilp-spsp-server was returning application/json instead, and this code should stay
@@ -99,5 +116,6 @@ async function pay (plugin, {
 
 module.exports = {
   query,
-  pay
+  pay,
+  PaymentError
 }

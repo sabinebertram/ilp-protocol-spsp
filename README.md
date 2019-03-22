@@ -13,10 +13,15 @@ Sends a single-chunk PSK payment or a STREAM payment, if the server supports
 it. Great for micro-payments or micro-donations inside of a script.
 
 ```js
-await SPSP.pay(plugin, {
-  receiver: '$bob.example.com',
-  sourceAmount: '1000'
-})
+try {
+  const resp = await SPSP.pay(plugin, {
+    receiver: '$bob.example.com',
+    sourceAmount: '1000'
+  })
+  console.log(`sent "${resp.totalSent}"`)
+} catch (e) {
+  console.log(`sent "${e instanceof SPSP.PaymentError ? e.totalSent : 0}"`)
+}
 ```
 
 ### Advanced Usage
